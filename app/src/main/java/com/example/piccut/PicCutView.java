@@ -43,9 +43,9 @@ public class PicCutView extends View {
     private int mWidth, mHeight;
     private Rect mCutRect = null;
     /**
-     * 默认缩放最小比例为初始化时的一半
+     * 默认缩放最小比例为初始化时的100%，如果低于1，则会出现留白
      **/
-    private float mScaleMin = 0.5f;
+    private float mScaleMin = 1f;
     /**
      * 默认缩放最大比例为初始化时的2倍
      **/
@@ -88,8 +88,9 @@ public class PicCutView extends View {
         init();
     }
 
-    public void setPic(Bitmap bmp) {
+    public void setPic(Bitmap bmp, Rect rect) {
         mBmp = bmp;
+        setCutPicRect(rect);
         resetView();
     }
 
@@ -151,7 +152,7 @@ public class PicCutView extends View {
      * 每加载一张图片都要重初始化缩放等所有参数，因为每张图片的长宽参数都不一样
      **/
     private void resetView() {
-        if (mBmp != null && !mBmp.isRecycled() && mWidth > 0 && mHeight > 0) {
+        if (mBmp != null && !mBmp.isRecycled() && mWidth > 0 && mHeight > 0 && mCutRect != null) {
             int bmpH = mBmp.getHeight();
             int bmpW = mBmp.getWidth();
             //复原参数
@@ -160,13 +161,15 @@ public class PicCutView extends View {
             mdX = mdY = 0;
             //图片中间部分放在控件上
             float scale;
-            //图片缩放到view的宽高可以容纳的成都
-            if (bmpW >= bmpH) {
-                scale = (float) mWidth / bmpW;
-                mdY = mHeight / 2 - bmpH * scale / 2; //移动到view的中间位置
-            } else {
-                scale = (float) mHeight / bmpH;
-                mdX = mWidth / 2 - bmpW * scale / 2; //移动到view的中间位置
+            //图片缩放到view的宽高可以容纳的程度
+            if (bmpW >= bmpH) {//bmpH是短边时
+                scale = (float) mCutRect.height() / bmpH;
+                mdX -= (bmpW * scale - mWidth) / 2; //移动到view的中间位置
+                mdY = mCutRect.top; //移动到Rect上边界
+            } else {//bmpW是短边时
+                scale = (float) mCutRect.width() / bmpW;
+                mdX = mCutRect.left; //移动到Rect左边界
+                mdY -= (bmpH * scale - mHeight) / 2;
             }
             //先以左上角0，0点缩放到目标比例
             mMatrix.postScale(scale, scale, 0, 0);
@@ -186,6 +189,9 @@ public class PicCutView extends View {
      * @param py    缩放中心y坐标
      **/
     public void scale(float scale, float px, float py) {
+        if (mCutRect == null) {
+            return;
+        }
         float relatedTotalScale = mTotalScale / mInitScale; //因为resetView时为了让图片刚好可以被屏幕包裹，本身就做过缩放，所以mTotalScale不为1，但为了方便接下来缩放比例换算，把初始化后的比例看作1。
         if (scale < 1f && relatedTotalScale * scale < mScaleMin) { //如果正在试图缩小，但计算出缩小后的比例值会小于最小限制比例，则取消缩放
             return;
@@ -193,9 +199,29 @@ public class PicCutView extends View {
         if (scale >= 1f && relatedTotalScale * scale > mScaleMax) {
             return;
         }
+
         if (mMatrix != null && mBmp != null && !mBmp.isRecycled()) {
             mMatrix.postScale(scale, scale, px, py);
             mTotalScale *= scale;
+            int bmpW = mBmp.getWidth();
+            int bmpH = mBmp.getHeight();
+            //不允许缩放时出框
+            float matrix[] = new float[9];
+            mMatrix.getValues(matrix);
+            if (matrix[2] < mCutRect.left && matrix[2] + bmpW * mTotalScale < mCutRect.right) {
+                matrix[2] -= matrix[2] + bmpW * mTotalScale - mCutRect.right;
+            }
+            if (matrix[2] > mCutRect.left && matrix[2] + bmpW * mTotalScale > mCutRect.right) {
+                matrix[2] = mCutRect.left;
+            }
+            if (matrix[5] < mCutRect.top && matrix[5] + bmpH * mTotalScale < mCutRect.bottom) {
+                matrix[5] -= matrix[5] + bmpH * mTotalScale - mCutRect.bottom;
+            }
+            if (matrix[5] > mCutRect.top && matrix[5] + bmpH * mTotalScale > mCutRect.bottom) {
+                matrix[5] = mCutRect.top;
+            }
+            mMatrix.setValues(matrix);
+
             invalidate();
         }
         Log.i("缩放", String.format("百分比：%f", mTotalScale));
@@ -208,8 +234,8 @@ public class PicCutView extends View {
      * @param distanceY 本次移动距离y分量
      **/
     private void translate(float distanceX, float distanceY) {
-        if (mMatrix != null && mBmp != null && !mBmp.isRecycled()) {
-            //不允许用户把图片完全推出屏幕外:
+        if (mMatrix != null && mBmp != null && !mBmp.isRecycled() && mCutRect != null) {
+            //不允许用户把图片完全推出框框外:
             float matrix[] = new float[9];
             int bmpW = mBmp.getWidth();
             int bmpH = mBmp.getHeight();
@@ -217,10 +243,10 @@ public class PicCutView extends View {
             float currentX = matrix[2];
             float currentY = matrix[5];
             //如果本次的distance值会让图片超出指定范围，则去除传入值的数学意义，即归0
-            if (currentX + bmpW * mTotalScale + distanceX < mWidth * mBorderXMin || currentX + distanceX > mWidth * mBorderXMax) {
+            if (currentX + bmpW * mTotalScale + distanceX < mCutRect.left + mCutRect.width() || currentX + distanceX > mCutRect.left) {
                 distanceX = 0;
             }
-            if (currentY + bmpH * mTotalScale + distanceY < mHeight * mBorderYMin || currentY + distanceY > mHeight * mBorderYMax) {
+            if (currentY + bmpH * mTotalScale + distanceY < mCutRect.top + mCutRect.height() || currentY + distanceY > mCutRect.top) {
                 distanceY = 0;
             }
             mdX += distanceX;
@@ -251,7 +277,7 @@ public class PicCutView extends View {
     /**
      * 设置图片裁剪范围
      **/
-    public void setCutPicRect(Rect rect) {
+    private void setCutPicRect(Rect rect) {
         this.mCutRect = new Rect(rect);
     }
 
@@ -355,11 +381,11 @@ public class PicCutView extends View {
     protected void onDraw(Canvas canvas) {
         if (mBmp != null && !mBmp.isRecycled()) {
             Paint p = new Paint();
-            p.setAlpha(50);
+            p.setAlpha(128);
             canvas.drawBitmap(mBmp, mMatrix, p);
 
             p.setAlpha(255);
-            canvas.clipRect(mCutRect);
+            canvas.clipRect(mCutRect); //只选择框内进行不透明渲染
             canvas.drawBitmap(mBmp, mMatrix, p);
         }
         if (mCutRect != null) {
