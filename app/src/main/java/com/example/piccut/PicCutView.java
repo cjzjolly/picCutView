@@ -1,6 +1,7 @@
 package com.example.piccut;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -9,6 +10,7 @@ import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -258,6 +260,12 @@ public class PicCutView extends View {
         return result;
     }
 
+    public static float convertDpToPixel(float dp, Context context) {
+        Resources resources = context.getResources();
+        DisplayMetrics metrics = resources.getDisplayMetrics();
+        float px = dp * ((float) metrics.densityDpi / DisplayMetrics.DENSITY_DEFAULT);
+        return px;
+    }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -347,9 +355,24 @@ public class PicCutView extends View {
         if (mCutRect != null) {
             Paint p = new Paint();
             p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(5);
-            p.setColor(Color.RED);
+            p.setStrokeWidth(3); //todo 要多粗啊
+            p.setColor(Color.WHITE);
             canvas.drawRect(mCutRect, p);
+
+            p.setStrokeWidth(9);
+            float cornerLength = mCutRect.width() > mCutRect.height() ? mCutRect.width() * 0.05f : mCutRect.height() * 0.05f;
+            //左上角
+            canvas.drawLine((float) mCutRect.left, (float) mCutRect.top, mCutRect.left + cornerLength, mCutRect.top, p);
+            canvas.drawLine((float) mCutRect.left, (float) mCutRect.top, mCutRect.left, mCutRect.top + cornerLength, p);
+            //左下角
+            canvas.drawLine((float) mCutRect.left, (float) mCutRect.bottom, mCutRect.left + cornerLength, mCutRect.bottom, p);
+            canvas.drawLine((float) mCutRect.left, (float) mCutRect.bottom, mCutRect.left, mCutRect.bottom - cornerLength, p);
+            //右上角
+            canvas.drawLine((float) mCutRect.right, (float) mCutRect.top, mCutRect.right - cornerLength, mCutRect.top, p);
+            canvas.drawLine((float) mCutRect.right, (float) mCutRect.top, mCutRect.right, mCutRect.top + cornerLength, p);
+            //右下角
+            canvas.drawLine((float) mCutRect.right, (float) mCutRect.bottom, mCutRect.right - cornerLength, mCutRect.bottom, p);
+            canvas.drawLine((float) mCutRect.right, (float) mCutRect.bottom, mCutRect.right, mCutRect.bottom - cornerLength, p);
         }
     }
 
@@ -360,4 +383,6 @@ public class PicCutView extends View {
         this.mHeight = getMySize(heightMeasureSpec);
         resetView();
     }
+
+
 }
