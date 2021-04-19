@@ -3,12 +3,16 @@ package com.example.piccut;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
+import android.graphics.Shader;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -350,7 +354,13 @@ public class PicCutView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         if (mBmp != null && !mBmp.isRecycled()) {
-            canvas.drawBitmap(mBmp, mMatrix, null);
+            Paint p = new Paint();
+            p.setAlpha(50);
+            canvas.drawBitmap(mBmp, mMatrix, p);
+
+            p.setAlpha(255);
+            canvas.clipRect(mCutRect);
+            canvas.drawBitmap(mBmp, mMatrix, p);
         }
         if (mCutRect != null) {
             Paint p = new Paint();
@@ -360,6 +370,7 @@ public class PicCutView extends View {
             canvas.drawRect(mCutRect, p);
 
             p.setStrokeWidth(9);
+            p.setStrokeCap(Paint.Cap.SQUARE);
             float cornerLength = mCutRect.width() > mCutRect.height() ? mCutRect.width() * 0.05f : mCutRect.height() * 0.05f;
             //左上角
             canvas.drawLine((float) mCutRect.left, (float) mCutRect.top, mCutRect.left + cornerLength, mCutRect.top, p);
@@ -373,6 +384,7 @@ public class PicCutView extends View {
             //右下角
             canvas.drawLine((float) mCutRect.right, (float) mCutRect.bottom, mCutRect.right - cornerLength, mCutRect.bottom, p);
             canvas.drawLine((float) mCutRect.right, (float) mCutRect.bottom, mCutRect.right, mCutRect.bottom - cornerLength, p);
+
         }
     }
 
