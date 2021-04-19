@@ -44,6 +44,22 @@ public class PicCutView extends View {
      * 默认缩放最大比例为初始化时的2倍
      **/
     private float mScaleMax = 2.0f;
+    /**
+     * 横向移动不得小于x轴长度的百分比
+     **/
+    private float mBorderXMin = 0.2f;
+    /**
+     * 横向移动不得大于x轴长度的百分比
+     **/
+    private float mBorderXMax = 0.8f;
+    /**
+     * 横向移动不得小于y轴长度的百分比
+     **/
+    private float mBorderYMin = 0.2f;
+    /**
+     * 横向移动不得大于y轴长度的百分比
+     **/
+    private float mBorderYMax = 0.8f;
 
     private void init() {
         if (mMatrix == null) {
@@ -87,6 +103,42 @@ public class PicCutView extends View {
      **/
     public void setScaleMax(float scaleMax) {
         this.mScaleMax = scaleMax;
+    }
+
+    /**
+     * 设置横向移动不得小于x轴长度的百分比
+     *
+     * @param borderXMin 横向移动不得小于x轴长度的百分比
+     **/
+    public void setBorderXMin(float borderXMin) {
+        this.mBorderXMin = borderXMin;
+    }
+
+    /**
+     * 设置横向移动不得大于x轴长度的百分比
+     *
+     * @param borderXMax 横向移动不得大于x轴长度的百分比
+     **/
+    public void setBorderXMax(float borderXMax) {
+        this.mBorderXMax = borderXMax;
+    }
+
+    /**
+     * 设置横向移动不得小于y轴长度的百分比
+     *
+     * @param borderYMin 横向移动不得小于y轴长度的百分比
+     **/
+    public void setBorderYMin(float borderYMin) {
+        this.mBorderYMin = borderYMin;
+    }
+
+    /**
+     * 设置横向移动不得大于y轴长度的百分比
+     *
+     * @param borderYMax 横向移动不得大于y轴长度的百分比
+     **/
+    public void setBorderYMax(float borderYMax) {
+        this.mBorderYMax = borderYMax;
     }
 
     /**
@@ -135,7 +187,7 @@ public class PicCutView extends View {
         if (scale >= 1f && relatedTotalScale * scale > mScaleMax) {
             return;
         }
-        if (mMatrix != null) {
+        if (mMatrix != null && mBmp != null && !mBmp.isRecycled()) {
             mMatrix.postScale(scale, scale, px, py);
             mTotalScale *= scale;
             invalidate();
@@ -150,10 +202,24 @@ public class PicCutView extends View {
      * @param distanceY 本次移动距离y分量
      **/
     private void translate(float distanceX, float distanceY) {
-        if (mMatrix != null) {
-            mMatrix.postTranslate(distanceX, distanceY);
+        if (mMatrix != null && mBmp != null && !mBmp.isRecycled()) {
+            //不允许用户把图片完全推出屏幕外:
+            float matrix[] = new float[9];
+            int bmpW = mBmp.getWidth();
+            int bmpH = mBmp.getHeight();
+            mMatrix.getValues(matrix);
+            float currentX = matrix[2];
+            float currentY = matrix[5];
+            //如果本次的distance值会让图片超出指定范围，则去除传入值的数学意义，即归0
+            if (currentX + bmpW * mTotalScale + distanceX < mWidth * mBorderXMin || currentX + distanceX > mWidth * mBorderXMax) {
+                distanceX = 0;
+            }
+            if (currentY + bmpH * mTotalScale + distanceY < mHeight * mBorderYMin || currentY + distanceY > mHeight * mBorderYMax) {
+                distanceY = 0;
+            }
             mdX += distanceX;
             mdY += distanceY;
+            mMatrix.postTranslate(distanceX, distanceY);
             invalidate();
         }
         Log.i("移动", String.format("x位移：%f， y位移：%f", distanceX, distanceY));
@@ -195,6 +261,9 @@ public class PicCutView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (mBmp == null && mBmp.isRecycled()) {
+            return true;
+        }
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 mPrevDistance = 0;
@@ -233,7 +302,7 @@ public class PicCutView extends View {
                 if ((mPrevPointCount != event.getPointerCount()) || event.getPointerCount() <= 1 || mPrevPointCount <= 1) { //触摸点数突然改变 或者 触摸点不超过2，不允许缩放
                     mPrevDistance = nowDistance = 0;
                 }
-                //如果缩放数据有效，则进行平均平滑化并且进行缩放
+                //检测上次手指之间的距离mPrevDistance和这次的nowDistance之间的长度差，以这次/上次所谓缩放比例。如果缩放数据有效，则进行平均平滑化并且进行缩放
                 if (mPrevDistance > 0 && nowDistance > 0) {
                     mTouchDistanceQueue.add(nowDistance / mPrevDistance);
                     if (mTouchDistanceQueue.size() >= 6) {
@@ -255,9 +324,9 @@ public class PicCutView extends View {
                 //当前坐标 - 上次坐标 = 偏移值，然后进行位置偏移
                 if (mPrevCurrentCenter == null) {
                     mPrevCurrentCenter = new PointF(mAvergeX, mAvergeY);
-                } else {
-                    translate(mAvergeX - mPrevCurrentCenter.x, mAvergeY - mPrevCurrentCenter.y);
-                    mPrevCurrentCenter.set(mAvergeX, mAvergeY);
+                } else if(event.getPointerCount() > 0) {
+                    translate(event.getX(0) - mPrevCurrentCenter.x, event.getY(0) - mPrevCurrentCenter.y);
+                    mPrevCurrentCenter.set(event.getX(0), event.getY(0));
                 }
                 break;
             case MotionEvent.ACTION_UP:
