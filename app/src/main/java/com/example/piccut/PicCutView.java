@@ -66,6 +66,7 @@ public class PicCutView extends View {
      * 横向移动不得大于y轴长度的百分比
      **/
     private float mBorderYMax = 0.8f;
+    private boolean mDebug = false;
 
     private void init() {
         if (mMatrix == null) {
@@ -209,13 +210,13 @@ public class PicCutView extends View {
             float matrix[] = new float[9];
             mMatrix.getValues(matrix);
             if (matrix[2] < mCutRect.left && matrix[2] + bmpW * mTotalScale < mCutRect.right) {
-                matrix[2] -= matrix[2] + bmpW * mTotalScale - mCutRect.right;
+                matrix[2] += mCutRect.right - (matrix[2] + bmpW * mTotalScale);
             }
             if (matrix[2] > mCutRect.left && matrix[2] + bmpW * mTotalScale > mCutRect.right) {
                 matrix[2] = mCutRect.left;
             }
             if (matrix[5] < mCutRect.top && matrix[5] + bmpH * mTotalScale < mCutRect.bottom) {
-                matrix[5] -= matrix[5] + bmpH * mTotalScale - mCutRect.bottom;
+                matrix[5] += mCutRect.bottom - (matrix[5] + bmpH * mTotalScale);
             }
             if (matrix[5] > mCutRect.top && matrix[5] + bmpH * mTotalScale > mCutRect.bottom) {
                 matrix[5] = mCutRect.top;
@@ -385,8 +386,10 @@ public class PicCutView extends View {
             canvas.drawBitmap(mBmp, mMatrix, p);
 
             p.setAlpha(255);
+            canvas.save();
             canvas.clipRect(mCutRect); //只选择框内进行不透明渲染
             canvas.drawBitmap(mBmp, mMatrix, p);
+            canvas.restore(); //还原绘制区域
         }
         if (mCutRect != null) {
             Paint p = new Paint();
@@ -411,6 +414,13 @@ public class PicCutView extends View {
             canvas.drawLine((float) mCutRect.right, (float) mCutRect.bottom, mCutRect.right - cornerLength, mCutRect.bottom, p);
             canvas.drawLine((float) mCutRect.right, (float) mCutRect.bottom, mCutRect.right, mCutRect.bottom - cornerLength, p);
 
+
+            if (mDebug) {
+                p.setColor(Color.RED);
+                float matrix[] = new float[9];
+                mMatrix.getValues(matrix);
+                canvas.drawRect(new Rect((int) matrix[2], (int) matrix[5], (int) (matrix[2] + mBmp.getWidth() * mTotalScale), (int) (matrix[5] + mBmp.getHeight() * mTotalScale)), p);
+            }
         }
     }
 
