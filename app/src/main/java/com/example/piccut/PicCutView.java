@@ -300,7 +300,7 @@ public class PicCutView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (mBmp == null && mBmp.isRecycled()) {
+        if (mBmp == null || mBmp.isRecycled()) {
             return true;
         }
         switch (event.getAction()) {
