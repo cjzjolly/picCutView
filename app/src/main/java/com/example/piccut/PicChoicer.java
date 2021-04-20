@@ -33,6 +33,8 @@ public class PicChoicer extends View {
     private boolean mDebug = false;
     /**白框是否跟随选中条目，false为固定于view中线位置**/
     private boolean mIsCenterRectFollwed = false;
+    /**按长边居中图片**/
+    private boolean mAlignCenterByLongEdge = false;
 
     private class Item { //条目
         public Bitmap bitmap;
@@ -270,14 +272,28 @@ public class PicChoicer extends View {
                     int bmpH = bmp.getHeight();
                     Matrix matrix = new Matrix();
                     float scale = 1f;
-                    if (bmpW >= bmpH) { //保持比例缩放，并适配窗口
-                        scale = (float) item.rect.width() / bmpW;
+                    if (mAlignCenterByLongEdge) {
+                        if (bmpW >= bmpH) { //保持比例缩放，并适配窗口(按最长边缩放)
+                            scale = (float) item.rect.width() / bmpW;
+                        } else {
+                            scale = (float) item.rect.height() / bmpH;
+                        }
+                        matrix.postScale(scale, scale); //缩放
+                        matrix.postTranslate(item.rect.left + (item.rect.width() - bmpW * scale) / 2, item.rect.top + (item.rect.height() - bmpH * scale) / 2); //移动到框内，居中显示
+                        canvas.drawBitmap(item.bitmap, matrix, null);
                     } else {
-                        scale = (float) item.rect.height() / bmpH;
+                        if (bmpW <= bmpH) { //保持比例缩放，并适配窗口(按最短边缩放)
+                            scale = (float) item.rect.width() / bmpW;
+                        } else {
+                            scale = (float) item.rect.height() / bmpH;
+                        }
+                        matrix.postScale(scale, scale); //缩放
+                        matrix.postTranslate(item.rect.left + (item.rect.width() - bmpW * scale) / 2, item.rect.top + (item.rect.height() - bmpH * scale) / 2); //移动到框内，居中显示
+                        canvas.save();
+                        canvas.clipRect(item.rect); //裁剪多余部分
+                        canvas.drawBitmap(item.bitmap, matrix, null);
+                        canvas.restore();
                     }
-                    matrix.postScale(scale, scale); //缩放
-                    matrix.postTranslate(item.rect.left + (item.rect.width() - bmpW * scale) / 2, item.rect.top + (item.rect.height() - bmpH * scale) / 2); //移动到框内，居中显示
-                    canvas.drawBitmap(item.bitmap, matrix, null);
                 }
                 if (mIsCenterRectFollwed) {
                     if (i == mMostCloseItemPos) { //只有中线划过的条目显示白色框框
