@@ -427,9 +427,13 @@ public class PicCutView extends View {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        this.mWidth = getMySize(widthMeasureSpec);
-        this.mHeight = getMySize(heightMeasureSpec);
-        resetView();
+        int w = getMySize(widthMeasureSpec);
+        int h = getMySize(heightMeasureSpec);
+        if (w != mWidth || h != mHeight) { //已经onMeasuer过一次，除非界面大小改动否则不重新初始化view
+            this.mWidth = getMySize(widthMeasureSpec);
+            this.mHeight = getMySize(heightMeasureSpec);
+            resetView();
+        }
     }
 
 
