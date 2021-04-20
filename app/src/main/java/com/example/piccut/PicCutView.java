@@ -291,7 +291,7 @@ public class PicCutView extends View {
         return result;
     }
 
-    public static float convertDpToPixel(float dp, Context context) {
+    private float convertDpToPixel(float dp, Context context) {
         Resources resources = context.getResources();
         DisplayMetrics metrics = resources.getDisplayMetrics();
         float px = dp * ((float) metrics.densityDpi / DisplayMetrics.DENSITY_DEFAULT);

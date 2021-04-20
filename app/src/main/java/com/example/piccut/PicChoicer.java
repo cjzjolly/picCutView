@@ -2,6 +2,7 @@ package com.example.piccut;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -9,7 +10,9 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -28,6 +31,8 @@ public class PicChoicer extends View {
      **/
     private int mMostCloseItemPos = 0;
     private boolean mDebug = false;
+    /**白框是否跟随选中条目，false为固定于view中线位置**/
+    private boolean mIsCenterRectFollwed = false;
 
     private class Item { //条目
         public Bitmap bitmap;
@@ -37,7 +42,6 @@ public class PicChoicer extends View {
     private List<Item> mItemList;
     private int mWidth;
     private int mHeight;
-    private float mDx, mDy;
     private ValueAnimator mTransFinishAnim;
     private boolean isInited = false;
     private int mCount = 5; //一行几个item
@@ -45,16 +49,10 @@ public class PicChoicer extends View {
     private int mMargin; //item之间的距离
     private PointF mPrevCurrentCenter = null;
     private float mPrevDistance = Float.MIN_VALUE;
-    private float mTotalScale = 1f;
-    /**
-     * resetView初始化图片时的大小，不变
-     **/
-    private float mInitScale = 1f;
     /**
      * 触摸点点距队列
      **/
     private Queue<Float> mTouchDistanceQueue = new LinkedBlockingQueue<>();
-    private Matrix mMatrix;
     private float mAvergeX = 0, mAvergeY = 0;
     private int mPrevPointCount = 0;
 
@@ -76,7 +74,6 @@ public class PicChoicer extends View {
 
     private void init() {
         if (isInited) {
-            this.mMatrix = new Matrix();
             isInited = true;
         }
     }
@@ -87,24 +84,12 @@ public class PicChoicer extends View {
     }
 
     /**
-     * 缩放函数
-     *
-     * @param scale 本次缩放量
-     * @param px    缩放中心x坐标
-     * @param py    缩放中心y坐标
-     **/
-    public void scale(float scale, float px, float py) {
-
-    }
-
-    /**
      * 移动函数
      *
      * @param distanceX 本次移动距离x分量
      **/
     private void translate(float distanceX) {
         if (mWidth > 0 && mHeight > 0) {
-            this.mDx += distanceX;
             int mostCloseVal = Integer.MAX_VALUE;
             mMostCloseItemPos = 0;
             for (int i = 0; i < mItemList.size(); i++) {
@@ -151,7 +136,6 @@ public class PicChoicer extends View {
             this.mUnitSize = mWidth > mHeight ? mHeight / mCount : mWidth / mCount;
             this.mMargin = mUnitSize / 10;
             this.mItemList = new ArrayList<>(mBmpList.size());
-            this.mDx = mWidth / 2;
             int totalSize = mUnitSize + mMargin;
             for (int i = 0; i < mBmpList.size(); i++) {
                 Item item = new Item();
@@ -208,12 +192,6 @@ public class PicChoicer extends View {
                     if (mTouchDistanceQueue.size() >= 6) {
                         Float point[] = new Float[mTouchDistanceQueue.size()];
                         mTouchDistanceQueue.toArray(point);
-                        float avergDistance = 0;
-                        for (int i = 0; i < point.length; i++) {
-                            avergDistance += point[i];
-                        }
-                        avergDistance /= point.length;
-                        scale((float) Math.sqrt(avergDistance), mAvergeX, mAvergeY);
                         while (mTouchDistanceQueue.size() > 6) {
                             mTouchDistanceQueue.poll();
                         }
@@ -259,19 +237,29 @@ public class PicChoicer extends View {
         return result;
     }
 
+    public float convertDpToPixel(float dp, Context context) {
+        Resources resources = context.getResources();
+        DisplayMetrics metrics = resources.getDisplayMetrics();
+        float px = dp * ((float) metrics.densityDpi / DisplayMetrics.DENSITY_DEFAULT);
+        return px;
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         if (mWidth > 0 && mHeight > 0 && mItemList != null && mItemList.size() > 0) {
             Paint p = new Paint();
             p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(3); //todo 要多粗啊
+            p.setStrokeWidth(convertDpToPixel(2f, getContext()));
+            p.setStrokeCap(Paint.Cap.ROUND);
             p.setColor(Color.WHITE);
             p.setStrokeCap(Paint.Cap.SQUARE);
+            p.setAntiAlias(true);
             Rect viewRect = new Rect(0, 0, mWidth, mHeight);
+            float cornetR = convertDpToPixel(3f, getContext());
             for (int i = 0; i < mItemList.size(); i++) {
                 Item item = mItemList.get(i);
                 Rect rect = item.rect;
-                //item超出范围就不渲染
+                //item超出范围就不渲染，节约资源
                 if (!(viewRect.intersects(rect.left, rect.top, rect.right, rect.bottom) || viewRect.contains(rect))) {
                     continue;
                 }
@@ -287,18 +275,24 @@ public class PicChoicer extends View {
                     } else {
                         scale = (float) item.rect.height() / bmpH;
                     }
-                    matrix.postScale(scale, scale);
-                    matrix.postTranslate(item.rect.left + (item.rect.width() - bmpW * scale) / 2, item.rect.top + (item.rect.height() - bmpH * scale) / 2); //居中显示
+                    matrix.postScale(scale, scale); //缩放
+                    matrix.postTranslate(item.rect.left + (item.rect.width() - bmpW * scale) / 2, item.rect.top + (item.rect.height() - bmpH * scale) / 2); //移动到框内，居中显示
                     canvas.drawBitmap(item.bitmap, matrix, null);
                 }
-                if (i == mMostCloseItemPos) { //只有中线显示白色框框
-                    canvas.drawRect(rect, p);
+                if (mIsCenterRectFollwed) {
+                    if (i == mMostCloseItemPos) { //只有中线划过的条目显示白色框框
+                        canvas.drawRect(rect, p);
+                    }
+                } else {
+                    Rect centerRect = new Rect(mWidth / 2 - mUnitSize / 2, mHeight / 2 - mUnitSize / 2, mWidth / 2 + mUnitSize / 2, mHeight / 2 + mUnitSize / 2);
+                    canvas.drawRoundRect(new RectF(centerRect.left, centerRect.top, centerRect.right, centerRect.bottom), cornetR, cornetR, p);
+
                 }
                 if (mDebug) {
                     Paint debugP = new Paint();
                     debugP.setStyle(Paint.Style.STROKE);
                     debugP.setColor(Color.RED);
-                    debugP.setStrokeWidth(3); //todo 要多粗啊
+                    debugP.setStrokeWidth(convertDpToPixel(2f, getContext()));
                     debugP.setTextSize(rect.width() / 2);
                     canvas.drawText(i + "", rect.left + rect.width() / 2, rect.top + rect.height() / 2, debugP);
                     canvas.drawRect(viewRect, debugP);
