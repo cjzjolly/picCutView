@@ -34,7 +34,6 @@ public class MainActivity extends Activity {
             }
         });
 
-        mPicCutView.setPic(BitmapFactory.decodeResource(getResources(), R.drawable.test));
-        mPicCutView.setCutPicRect(new Rect(100, 500, 1080 - 100, 2110 - 500));
+        mPicCutView.setPic(BitmapFactory.decodeResource(getResources(), R.drawable.test), new Rect(100, 500, 1080 - 100, 2110 - 500));
     }
 }
