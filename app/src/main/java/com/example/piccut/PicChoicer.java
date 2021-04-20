@@ -1,5 +1,6 @@
 package com.example.piccut;
 
+import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.Resources;
@@ -13,7 +14,6 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -31,15 +31,26 @@ public class PicChoicer extends View {
      **/
     private int mMostCloseItemPos = 0;
     private boolean mDebug = false;
-    /**白框是否跟随选中条目，false为固定于view中线位置**/
+    /**
+     * 白框是否跟随选中条目，false为固定于view中线位置
+     **/
     private boolean mIsCenterRectFollwed = false;
-    /**按长边居中图片**/
+    /**
+     * 按长边居中图片
+     **/
     private boolean mAlignCenterByLongEdge = false;
 
     private class Item { //条目
         public Bitmap bitmap;
         public Rect rect;
     }
+
+    //中线选中图片的回调
+    public interface SelectListener {
+        void select(int position);
+    }
+
+    private SelectListener mSelectListener = null;
 
     private List<Item> mItemList;
     private int mWidth;
@@ -130,6 +141,30 @@ public class PicChoicer extends View {
                 prevX = new Integer((int) animation.getAnimatedValue());
             }
         });
+        mTransFinishAnim.addListener(new Animator.AnimatorListener() {
+
+            @Override
+            public void onAnimationStart(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (mSelectListener != null) {
+                    mSelectListener.select(mMostCloseItemPos);
+                }
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {
+
+            }
+        });
         mTransFinishAnim.start();
     }
 
@@ -146,6 +181,10 @@ public class PicChoicer extends View {
                 mItemList.add(item);
             }
         }
+    }
+
+    public void setSelectListener(SelectListener mSelectListener) {
+        this.mSelectListener = mSelectListener;
     }
 
     @Override
@@ -258,6 +297,7 @@ public class PicChoicer extends View {
             p.setAntiAlias(true);
             Rect viewRect = new Rect(0, 0, mWidth, mHeight);
             float cornetR = convertDpToPixel(3f, getContext());
+            int padding = (int) convertDpToPixel(1f, getContext());
             for (int i = 0; i < mItemList.size(); i++) {
                 Item item = mItemList.get(i);
                 Rect rect = item.rect;
@@ -300,8 +340,11 @@ public class PicChoicer extends View {
                         canvas.drawRect(rect, p);
                     }
                 } else {
-                    Rect centerRect = new Rect(mWidth / 2 - mUnitSize / 2, mHeight / 2 - mUnitSize / 2, mWidth / 2 + mUnitSize / 2, mHeight / 2 + mUnitSize / 2);
-                    canvas.drawRoundRect(new RectF(centerRect.left, centerRect.top, centerRect.right, centerRect.bottom), cornetR, cornetR, p);
+                    RectF centerRect = new RectF(mWidth / 2 - mUnitSize / 2 - padding,
+                            mHeight / 2 - mUnitSize / 2 - padding,
+                            mWidth / 2 + mUnitSize / 2 + padding,
+                            mHeight / 2 + mUnitSize / 2 + padding);
+                    canvas.drawRoundRect(centerRect, cornetR, cornetR, p);
 
                 }
                 if (mDebug) {
