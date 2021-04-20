@@ -102,7 +102,7 @@ public class PicChoicer extends View {
      * @param distanceX 本次移动距离x分量
      **/
     private void translate(float distanceX) {
-        if (mWidth > 0 && mHeight > 0) {
+        if (mWidth > 0 && mHeight > 0 && mItemList != null && mItemList.size() > 0) {
             int mostCloseVal = Integer.MAX_VALUE;
             mMostCloseItemPos = 0;
             for (int i = 0; i < mItemList.size(); i++) {
@@ -121,6 +121,9 @@ public class PicChoicer extends View {
     }
 
     private void translateFinish() {
+        if (mItemList == null || mItemList.size() == 0) {
+            return;
+        }
         translate(0);
         if (mTransFinishAnim != null) {
             mTransFinishAnim.cancel();
