@@ -1,4 +1,4 @@
-package com.example.piccut;
+package com.example.picchoice;
 
 import android.animation.Animator;
 import android.animation.ValueAnimator;
