@@ -72,23 +72,14 @@ public class PicChoicer extends View {
 
     public PicChoicer(Context context) {
         super(context);
-        init();
     }
 
     public PicChoicer(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        init();
     }
 
     public PicChoicer(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
-    }
-
-    private void init() {
-        if (isInited) {
-            isInited = true;
-        }
     }
 
     public void setImageList(List<Bitmap> list) {
@@ -173,7 +164,7 @@ public class PicChoicer extends View {
 
     private void resetView() {
         if (mWidth > 0 && mHeight > 0 && mBmpList != null) {
-            this.mUnitSize = mWidth > mHeight ? mHeight / mCount : mWidth / mCount;
+            this.mUnitSize = (int) (mHeight * 0.6f);
             this.mMargin = mUnitSize / 10;
             this.mItemList = new ArrayList<>(mBmpList.size());
             int totalSize = mUnitSize + mMargin;
@@ -267,9 +258,13 @@ public class PicChoicer extends View {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        this.mWidth = getMySize(widthMeasureSpec);
-        this.mHeight = getMySize(heightMeasureSpec);
-        resetView();
+        int w = getMySize(widthMeasureSpec);
+        int h = getMySize(heightMeasureSpec);
+        if (w != mWidth || h != mHeight) { //已经onMeasuer过一次，除非界面大小改动否则不重新初始化view
+            this.mWidth = getMySize(widthMeasureSpec);
+            this.mHeight = getMySize(heightMeasureSpec);
+            resetView();
+        }
     }
 
     /* 获取测量大小*/
