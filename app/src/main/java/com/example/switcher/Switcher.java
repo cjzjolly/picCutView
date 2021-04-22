@@ -47,6 +47,16 @@ public class Switcher extends View {
     private PointF mStartPoint = null;
     private PointF mEndPoint = null;
 
+    public void selectTab(int position) {
+        if (mItemList == null) {
+            return;
+        }
+        for(int i = 0;  i < mItemList.size(); i++) {
+            mItemList.get(i).mIsChecked = position == i ? true : false;
+        }
+        invalidate();
+    }
+
     private class Item {
         public String mTitle;
         public Rect mRect;
