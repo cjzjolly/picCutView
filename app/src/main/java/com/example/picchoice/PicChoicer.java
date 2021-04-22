@@ -115,7 +115,6 @@ public class PicChoicer extends View {
         if (mItemList == null || mItemList.size() == 0) {
             return;
         }
-        translate(0);
         if (mTransFinishAnim != null) {
             mTransFinishAnim.cancel();
         }
@@ -171,14 +170,15 @@ public class PicChoicer extends View {
             for (int i = 0; i < mBmpList.size(); i++) {
                 Item item = new Item();
                 item.bitmap = mBmpList.get(i);
-                item.rect = new Rect(mWidth / 2 - mUnitSize / 2 + totalSize * i, mHeight / 2 - mUnitSize / 2, mWidth / 2 + mUnitSize / 2 + totalSize * i, mHeight / 2 + mUnitSize / 2);
+                item.rect = new Rect(mWidth / 2 - mUnitSize / 2 + totalSize * i, mHeight / 2 - mUnitSize / 2,
+                        mWidth / 2 + mUnitSize / 2 + totalSize * i, mHeight / 2 + mUnitSize / 2);
                 mItemList.add(item);
             }
         }
     }
 
-    public void setSelectListener(SelectListener mSelectListener) {
-        this.mSelectListener = mSelectListener;
+    public void setSelectListener(SelectListener selectListener) {
+        this.mSelectListener = selectListener;
     }
 
     @Override
