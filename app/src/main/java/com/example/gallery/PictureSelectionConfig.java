@@ -36,7 +36,7 @@ public final class PictureSelectionConfig implements Parcelable {
     public boolean isAndroidQTransform;
     @StyleRes
 //    public int themeStyleId = R.style.picture_default_style;
-    public int selectionMode = PictureConfig.MULTIPLE;
+    public int selectionMode = PictureConfig.SINGLE; //限定为单选
     public int maxSelectNum = 9;
     public int minSelectNum = 0;
     public int maxVideoSelectNum = 1;
@@ -409,7 +409,7 @@ public final class PictureSelectionConfig implements Parcelable {
         this.isCameraAroundState = in.readByte() != 0;
         this.isAndroidQTransform = in.readByte() != 0;
 //        this.themeStyleId = in.readInt();
-        this.selectionMode = in.readInt();
+//        this.selectionMode = in.readInt();
         this.maxSelectNum = in.readInt();
         this.minSelectNum = in.readInt();
         this.maxVideoSelectNum = in.readInt();

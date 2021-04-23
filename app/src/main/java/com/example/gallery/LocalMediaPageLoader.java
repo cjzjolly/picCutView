@@ -217,6 +217,7 @@ public final class LocalMediaPageLoader {
      * @return
      */
     public void loadPageMediaData(long bucketId, int page, int limit, OnQueryDataResultListener listener) {
+//        loadPageMediaData(bucketId, page, limit, config.pageSize, listener);
         loadPageMediaData(bucketId, page, limit, config.pageSize, listener);
     }
 

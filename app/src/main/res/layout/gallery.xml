@@ -23,12 +23,22 @@
 
     <TextView
         android:id="@+id/tv_title"
-        android:layout_width="64dp"
+        android:layout_width="wrap_content"
         android:layout_height="24dp"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="10dp"
         android:textSize="16sp"
-        android:text="编辑封面"/>
+        android:text="最近项目"/>
+
+
+    <ImageView
+        android:id="@+id/iv_arrow"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/picture_icon_arrow_down"
+        android:layout_toRightOf="@+id/tv_title"
+        android:layout_marginTop="10dp"/>
 
     <Button
         android:id="@+id/btn_next_step"

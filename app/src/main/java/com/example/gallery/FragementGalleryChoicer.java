@@ -37,6 +37,9 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
     protected int oldCurrentListSize;
     protected PictureSelectionConfig config;
 
+    /**每一行多少个**/
+    private int mSpanCount = 3;
+
 
     @Nullable
     @Override
@@ -45,9 +48,9 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
         config = PictureSelectionConfig.getInstance();
         config.initDefaultValue();
         mRecyclerView = mRootView.findViewById(R.id.rv_content);
-        mRecyclerView.addItemDecoration(new GridSpacingItemDecoration(4, ScreenUtils.dip2px(getContext(), 2), false));
-        mRecyclerView.setLayoutManager(new GridLayoutManager(getContext(), 4));
-        if (mIsPageStrategy) {
+        mRecyclerView.addItemDecoration(new GridSpacingItemDecoration(mSpanCount, ScreenUtils.dip2px(getContext(), 2), false));
+        mRecyclerView.setLayoutManager(new GridLayoutManager(getContext(), mSpanCount));
+        if (!mIsPageStrategy) {
             mRecyclerView.setHasFixedSize(true);
         } else {
             mRecyclerView.setReachBottomRow(RecyclerPreloadView.BOTTOM_PRELOAD);
@@ -69,13 +72,13 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
     /**选中的图片数据集合**/
     @Override
     public void onChange(List<LocalMedia> selectData) {
-
+        Log.i("cjztest", "FragementGalleryChoicer.onChange:" + selectData.size());
     }
 
     /**图片被点击**/
     @Override
     public void onPictureClick(LocalMedia media, int position) {
-
+        Log.i("cjztest", "FragementGalleryChoicer.onPictureClick:" + position);
     }
 
     @Override
@@ -201,26 +204,22 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
      * load All Data
      */
     private void loadAllMediaData() {
-        Log.i("cjztest", "FragementGalleryChoicer.loadAllMediaData()");
         if (PermissionChecker
                 .checkSelfPermission(getContext(), Manifest.permission.READ_EXTERNAL_STORAGE) &&
                 PermissionChecker
                         .checkSelfPermission(getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-            Log.i("cjztest", "FragementGalleryChoicer.loadAllMediaData()__2");
             readLocalMedia();
         } else {
             PermissionChecker.requestPermissions(getActivity(), new String[]{
                     Manifest.permission.READ_EXTERNAL_STORAGE,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE}, PictureConfig.APPLY_STORAGE_PERMISSIONS_CODE);
-            Log.i("cjztest", "FragementGalleryChoicer.loadAllMediaData()__3");
         }
     }
 
     /**
      * load more data
      */
-    private void loadMoreData() { //cjzmark 读取数据？
-        Log.i("cjztest", "FragementGalleryChoicer.loadMoreData()");
+    private void loadMoreData() { //读取数据
         if (mAdapter != null) {
             if (isHasMore) {
                 mPage++;

@@ -50,14 +50,6 @@ public class PictureImageGridAdapter extends RecyclerView.Adapter<RecyclerView.V
         this.showCamera = false;  //cjzmark 不允许显示
     }
 
-    public void setShowCamera(boolean showCamera) {
-        this.showCamera = showCamera;
-    }
-
-    public boolean isShowCamera() {
-        return showCamera;
-    }
-
     /**
      * 全量刷新
      *
@@ -157,7 +149,6 @@ public class PictureImageGridAdapter extends RecyclerView.Adapter<RecyclerView.V
         } else {
             image.loadLongImageStatus = PictureConfig.NORMAL;
         }
-        boolean isHasVideo = PictureMimeType.isHasVideo(mimeType);
 //        if (config.chooseMode == PictureMimeType.ofAudio()) {
 //            contentHolder.ivPicture.setImageResource(R.drawable.picture_audio_placeholder);
 //        } else {
@@ -181,11 +172,11 @@ public class PictureImageGridAdapter extends RecyclerView.Adapter<RecyclerView.V
                 MediaUtils.setOrientationAsynchronous(context, image, config.isAndroidQChangeWH, config.isAndroidQChangeVideoWH, null);
                 changeCheckboxState(contentHolder, image);
                 //cjzmark 设置为上次选中的条目
-                if (mPrevCheckedItem != null) {
-//                        mPrevCheckedItem.tvCheck.setSelected(false);
-//                        AnimUtils.disZoom(mPrevCheckedItem.ivPicture, config.zoomAnim);
-                    changeCheckboxState(mPrevCheckedItem, data.get(showCamera ? mPrevCheckedPos - 1 : mPrevCheckedPos));
-                }
+//                if (mPrevCheckedItem != null) {
+////                        mPrevCheckedItem.tvCheck.setSelected(false);
+////                        AnimUtils.disZoom(mPrevCheckedItem.ivPicture, config.zoomAnim);
+//                    changeCheckboxState(mPrevCheckedItem, data.get(showCamera ? mPrevCheckedPos - 1 : mPrevCheckedPos));
+//                }
                 mPrevCheckedItem = contentHolder;
                 mPrevCheckedPos = position;
             });
@@ -375,7 +366,7 @@ public class PictureImageGridAdapter extends RecyclerView.Adapter<RecyclerView.V
     private void changeCheckboxState(ViewHolder contentHolder, LocalMedia image) {
         boolean isChecked = contentHolder.tvCheck.isSelected();
         int count = selectData.size();
-        String mimeType = count > 0 ? selectData.get(0).getMimeType() : "";
+//        String mimeType = count > 0 ? selectData.get(0).getMimeType() : "";
 //        if (config.isWithVideoImage) {
 //            // isWithVideoImage mode
 //            int videoSize = 0;
