@@ -276,7 +276,7 @@ public class PicChoicer extends View {
         return result;
     }
 
-    public float convertDpToPixel(float dp, Context context) {
+    private float convertDpToPixel(float dp, Context context) {
         Resources resources = context.getResources();
         DisplayMetrics metrics = resources.getDisplayMetrics();
         float px = dp * ((float) metrics.densityDpi / DisplayMetrics.DENSITY_DEFAULT);

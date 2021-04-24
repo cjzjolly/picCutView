@@ -3,18 +3,13 @@ package com.example.piccut;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PointF;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
-import android.graphics.Shader;
 import android.util.AttributeSet;
-import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -40,6 +35,10 @@ public class PicCutView extends View {
     private float mAvergeX = 0, mAvergeY = 0;
     private int mPrevPointCount = 0;
 
+    /**setPic的方式**/
+    private int mSetPicWay = 0;
+    /**setPicWay = 1时依靠居中选择框**/
+    private int mCutW, mCutH;
     private float mdX = 0f, mdY = 0f;
     private int mWidth, mHeight;
     private Rect mCutRect = null;
@@ -90,9 +89,31 @@ public class PicCutView extends View {
         init();
     }
 
+    public void setPic(Bitmap bmp) {
+        mBmp = bmp;
+//        if (mWidth > 0 && mHeight > 0) {
+//            mCutRect = new Rect((int) (mWidth - mWidth * wRatio) / 2, (int) (mHeight - mHeight * hRatio) / 2, (int) ((mWidth - mWidth * wRatio) / 2 + mWidth * wRatio), (int) ((mHeight - mHeight * hRatio) / 2 + mHeight * hRatio));
+//        }
+        mSetPicWay = 0;
+        resetView();
+    }
+
     public void setPic(Bitmap bmp, Rect rect) {
         mBmp = bmp;
         setCutPicRect(rect);
+        mSetPicWay = 1;
+        resetView();
+    }
+
+    public void setPic(Bitmap bmp, int cutW, int cutH) {
+        mBmp = bmp;
+        this.mCutW = cutW;
+        this.mCutH = cutH;
+        if (mWidth > 0 && mHeight > 0) {
+            mCutRect = new Rect((mWidth - mCutW) / 2, (mHeight - mCutH) / 2, (mWidth - mCutW) / 2 + mCutW, (mHeight - mCutH) / 2 + mCutH);
+        }
+        //等onMeasuer时设置Rect
+        mSetPicWay = 2;
         resetView();
     }
 
@@ -270,7 +291,9 @@ public class PicCutView extends View {
             Matrix tempMatrix = new Matrix(mMatrix);
             tempMatrix.postTranslate(-mCutRect.left, -mCutRect.top);  //例如我要截取图片可见部分的右半部分，等同于我选择框不动，图片向左移动相应距离。所以left这个对左边的距离等同于图片要左移的距离
             Canvas canvas = new Canvas(bitmap);
-            canvas.drawBitmap(mBmp, tempMatrix, null);
+            Paint paint = new Paint();
+            paint.setAntiAlias(true);
+            canvas.drawBitmap(mBmp, tempMatrix, paint);
             return bitmap;
         }
         return null;
@@ -381,18 +404,18 @@ public class PicCutView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (mBmp != null && !mBmp.isRecycled()) {
-            Paint p = new Paint();
-            p.setAlpha(128);
-            canvas.drawBitmap(mBmp, mMatrix, p);
-
-            p.setAlpha(255);
-            canvas.save();
-            canvas.clipRect(mCutRect); //只选择框内进行不透明渲染
-            canvas.drawBitmap(mBmp, mMatrix, p);
-            canvas.restore(); //还原绘制区域
-        }
         if (mCutRect != null) {
+            if (mBmp != null && !mBmp.isRecycled()) {
+                Paint p = new Paint();
+                p.setAlpha(128);
+                canvas.drawBitmap(mBmp, mMatrix, p);
+
+                p.setAlpha(255);
+                canvas.save();
+                canvas.clipRect(mCutRect); //只选择框内进行不透明渲染
+                canvas.drawBitmap(mBmp, mMatrix, p);
+                canvas.restore(); //还原绘制区域
+            }
             Paint p = new Paint();
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(3); //todo 要多粗啊
@@ -431,8 +454,20 @@ public class PicCutView extends View {
         int w = getMySize(widthMeasureSpec);
         int h = getMySize(heightMeasureSpec);
         if (w != mWidth || h != mHeight) { //已经onMeasuer过一次，除非界面大小改动否则不重新初始化view
-            this.mWidth = getMySize(widthMeasureSpec);
-            this.mHeight = getMySize(heightMeasureSpec);
+            mWidth = getMySize(widthMeasureSpec);
+            mHeight = getMySize(heightMeasureSpec);
+            switch (mSetPicWay) {
+                case 0:
+                    float wRatio = 0.9f;
+                    float hRatio = 0.69f;
+                    int cutW = (int) (mWidth * wRatio);
+                    int cutH = (int) (mHeight * hRatio);
+                    mCutRect = new Rect((mWidth - cutW) / 2, (mHeight - cutH) / 2, (mWidth - cutW) / 2 + cutW, (mHeight - cutH) / 2 + cutH);
+                    break;
+                case 2:
+                    mCutRect = new Rect((mWidth - mCutW) / 2, (mHeight - mCutH) / 2, (mWidth - mCutW) / 2 + mCutW, (mHeight - mCutH) / 2 + mCutH);
+                    break;
+            }
             resetView();
         }
     }

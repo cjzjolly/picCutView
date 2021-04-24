@@ -44,7 +44,7 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        mRootView = inflater.inflate(R.layout.gallery, container, false);
+        mRootView = inflater.inflate(R.layout.choice_gallery, container, false);
         config = PictureSelectionConfig.getInstance();
         config.initDefaultValue();
         mRecyclerView = mRootView.findViewById(R.id.rv_content);
@@ -67,12 +67,6 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
         mRecyclerView.setAdapter(mAdapter);
 
         return mRootView;
-    }
-
-    /**选中的图片数据集合**/
-    @Override
-    public void onChange(List<LocalMedia> selectData) {
-        Log.i("cjztest", "FragementGalleryChoicer.onChange:" + selectData.size());
     }
 
     /**图片被点击**/

@@ -13,12 +13,12 @@ public interface OnPhotoSelectChangedListener<T> {
 //     */
 //    void onTakePhoto();
 
-    /**
-     * Selected LocalMedia callback
-     *
-     * @param data
-     */
-    void onChange(List<T> data);
+//    /**
+//     * Selected LocalMedia callback
+//     *
+//     * @param data
+//     */
+//    void onChange(T data);
 
     /**
      * Image preview callback
