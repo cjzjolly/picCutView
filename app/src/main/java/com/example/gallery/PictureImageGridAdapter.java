@@ -78,6 +78,10 @@ public class PictureImageGridAdapter extends RecyclerView.Adapter<RecyclerView.V
         return getSize() > 0 ? data.get(position) : null;
     }
 
+    public List<LocalMedia> getSelectedData() {
+        return selectData == null ? new ArrayList<>() : selectData;
+    }
+
     @Override
     public int getItemViewType(int position) {
         return PictureConfig.TYPE_PICTURE;

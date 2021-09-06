@@ -8,6 +8,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 
+import com.example.test.PicCutNew;
+
 public class MainActivity extends Activity {
 
     private PicCutView mPicCutView;
@@ -29,7 +31,6 @@ public class MainActivity extends Activity {
             }
         });
 
-//        mPicCutView.setPic(BitmapFactory.decodeResource(getResources(), R.drawable.test), new Rect(100, 500, 1080 - 100, 2110 - 500));
-        mPicCutView.setPic(BitmapFactory.decodeResource(getResources(), R.drawable.test));
+        mPicCutView.setPic(BitmapFactory.decodeResource(getResources(), R.drawable.bg));
     }
 }

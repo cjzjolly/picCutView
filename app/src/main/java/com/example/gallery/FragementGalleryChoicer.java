@@ -7,6 +7,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -27,7 +29,7 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
     /**
      * if there more
      */
-    protected boolean isHasMore = true;
+    protected boolean mIsHasMore = true;
     /**
      * page
      */
@@ -39,6 +41,10 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
 
     /**每一行多少个**/
     private int mSpanCount = 3;
+    private FolderPopWindow mFolderWindow;
+    private ImageView ivArrow;
+    /**相册标题**/
+    private TextView mTvPictureTitle;
 
 
     @Nullable
@@ -48,6 +54,8 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
         config = PictureSelectionConfig.getInstance();
         config.initDefaultValue();
         mRecyclerView = mRootView.findViewById(R.id.rv_content);
+        ivArrow = mRootView.findViewById(R.id.iv_arrow);
+        mTvPictureTitle = mRootView.findViewById(R.id.tv_title);
         mRecyclerView.addItemDecoration(new GridSpacingItemDecoration(mSpanCount, ScreenUtils.dip2px(getContext(), 2), false));
         mRecyclerView.setLayoutManager(new GridLayoutManager(getContext(), mSpanCount));
         if (!mIsPageStrategy) {
@@ -65,7 +73,63 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
         mAdapter = new PictureImageGridAdapter(getContext(), config);
         mAdapter.setOnPhotoSelectChangedListener(this);
         mRecyclerView.setAdapter(mAdapter);
-
+        mFolderWindow = new FolderPopWindow(getContext());
+        mFolderWindow.setOnAlbumItemClickListener(new OnAlbumItemClickListener() { //相册选择
+            @Override
+            public void onItemClick(int position, boolean isCameraFolder, long bucketId, String folderName, List<LocalMedia> data) {
+                if (bucketId == -1) {
+                    mTvPictureTitle.setText("所有图片");   //设置标题
+                } else {
+                    mTvPictureTitle.setText(folderName);   //设置标题
+                    Log.i("cjztest", "bucketid:" + bucketId);
+                }
+                long currentBucketId = ValueOf.toLong(mTvPictureTitle.getTag()); //了解当前的数据篮子标记
+                //给不同的标题设置不同的数据篮子标记
+                mTvPictureTitle.setTag(mFolderWindow.getFolder(position) != null
+                        ? mFolderWindow.getFolder(position).getImageNum() : 0);
+                if (config.isPageStrategy) {
+                    if (currentBucketId != bucketId) {
+                        setLastCacheFolderData();
+                        boolean isCurrentCacheFolderData = isCurrentCacheFolderData(position);
+                        if (!isCurrentCacheFolderData) {
+                            mPage = 1;
+//                            showPleaseDialog(); //显示loading
+                            LocalMediaPageLoader.getInstance(getContext()).loadPageMediaData(bucketId, mPage,
+                                    (OnQueryDataResultListener<LocalMedia>) (result, currentPage, isHasMore) -> {
+                                        FragementGalleryChoicer.this.mIsHasMore = isHasMore;
+                                        if (!FragementGalleryChoicer.this.getActivity().isFinishing() && !FragementGalleryChoicer.this.isDetached()) {
+                                            if (result.size() == 0) {
+                                                mAdapter.clear();
+                                            }
+                                            mAdapter.bindData(result);
+                                            mRecyclerView.onScrolled(0, 0);
+                                            mRecyclerView.smoothScrollToPosition(0);
+//                                            dismissDialog();  //取消loading
+                                        }
+                                    });
+                        }
+                    }
+                } else {
+                    mAdapter.bindData(data);
+                    mRecyclerView.smoothScrollToPosition(0);
+                }
+                mTvPictureTitle.setTag(bucketId);
+                mFolderWindow.dismiss();
+            }
+        });
+        ivArrow.setOnClickListener(v->{
+            if (mFolderWindow.isShowing()) {
+                mFolderWindow.dismiss();
+            } else {
+                if (!mFolderWindow.isEmpty()) {
+                    mFolderWindow.showAsDropDown(ivArrow);
+                    if (!config.isSingleDirectReturn) {
+                        List<LocalMedia> selectedImages = mAdapter.getSelectedData();
+                        mFolderWindow.updateFolderCheckStatus(selectedImages);
+                    }
+                }
+            }
+        });
         return mRootView;
     }
 
@@ -78,6 +142,40 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
     @Override
     public void onRecyclerViewPreloadMore() {
         loadMoreData();
+    }
+
+    /**
+     * Before switching directories, set the current directory cache
+     */
+    private void setLastCacheFolderData() {
+        int oldPosition = ValueOf.toInt(mTvPictureTitle.getTag());
+        LocalMediaFolder lastFolder = mFolderWindow.getFolder(oldPosition);
+        if (lastFolder != null && mAdapter.getData() != null) {
+            lastFolder.setData(mAdapter.getData());
+            lastFolder.setCurrentDataPage(mPage);
+            lastFolder.setHasMore(mIsHasMore);
+        }
+    }
+
+    /**
+     * Does the current album have a cache
+     *
+     * @param position
+     */
+    private boolean isCurrentCacheFolderData(int position) {
+        mTvPictureTitle.setTag(position);
+        LocalMediaFolder currentFolder = mFolderWindow.getFolder(position);
+        if (currentFolder != null
+                && currentFolder.getData() != null
+                && currentFolder.getData().size() > 0) {
+            mAdapter.bindData(currentFolder.getData());
+            mPage = currentFolder.getCurrentDataPage();
+            mIsHasMore = currentFolder.isHasMore();
+            mRecyclerView.smoothScrollToPosition(0);
+
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -118,13 +216,16 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
      */
     private void initPageModel(List<LocalMediaFolder> folders) {
         if (folders != null) {
-//            folderWindow.bindFolder(folders);
+            for (LocalMediaFolder folder : folders) {
+                Log.i("cjztest", "FragmentGalleryChoicer.initPageModel__文件夹:" + folder.getName());
+            }
+            mFolderWindow.bindFolder(folders);
             mPage = 1;
-//            LocalMediaFolder folder = folderWindow.getFolder(0);
-//            mTvPictureTitle.setTag(R.id.view_count_tag, folder != null ? folder.getImageNum() : 0);
-//            mTvPictureTitle.setTag(R.id.view_index_tag, 0);
-//            long bucketId = folder != null ? folder.getBucketId() : -1;
-            long bucketId = mBucketId;
+            LocalMediaFolder folder = mFolderWindow.getFolder(0);
+//            mTvPictureTitle.setTag(folder != null ? folder.getImageNum() : 0);
+            mTvPictureTitle.setTag(0);
+            long bucketId = folder != null ? folder.getBucketId() : -1;
+//            long bucketId = mBucketId;
             mRecyclerView.setEnabledLoadMore(true);
             LocalMediaPageLoader.getInstance(getContext()).loadPageMediaData(bucketId, mPage,
                     (OnQueryDataResultListener<LocalMedia>) (data, currentPage, isHasMore) -> {
@@ -133,7 +234,7 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
                         }
                         if (!isDetached()) {
                             if (mAdapter != null) {
-                                this.isHasMore = true;
+                                this.mIsHasMore = true;
                                 // IsHasMore being true means that there's still data, but data being 0 might be a filter that's turned on and that doesn't happen to fit on the whole page
                                 if (isHasMore && data.size() == 0) {
                                     onRecyclerViewPreloadMore();
@@ -172,7 +273,7 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
                             Log.i("cjztest", "FragementGalleryChoicer.initPageModel数据:" + m.getName());
                         }
                         if (!isDetached()) {
-                            this.isHasMore = true;
+                            this.mIsHasMore = true;
                             initPageModel(data);
 //                            synchronousCover();
                         }
@@ -215,14 +316,14 @@ public class FragementGalleryChoicer extends Fragment implements OnRecyclerViewP
      */
     private void loadMoreData() { //读取数据
         if (mAdapter != null) {
-            if (isHasMore) {
+            if (mIsHasMore) {
                 mPage++;
-//                long bucketId = ValueOf.toLong(mTvPictureTitle.getTag(R.id.view_tag));
-                long bucketId = mBucketId;
+                long bucketId = ValueOf.toLong(mTvPictureTitle.getTag());
+//                long bucketId = mBucketId;
                 LocalMediaPageLoader.getInstance(getContext()).loadPageMediaData(bucketId, mPage, 60,
                         (OnQueryDataResultListener<LocalMedia>) (result, currentPage, isHasMore) -> {
                             if (!isDetached()) {
-                                this.isHasMore = isHasMore;
+                                this.mIsHasMore = isHasMore;
                                 if (isHasMore) {
                                     int size = result.size();
                                     if (size > 0) {

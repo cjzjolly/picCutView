@@ -36,9 +36,13 @@ public class PicCutView extends View {
     private float mAvergeX = 0, mAvergeY = 0;
     private int mPrevPointCount = 0;
 
-    /**setPic的方式**/
+    /**
+     * setPic的方式
+     **/
     private int mSetPicWay = 0;
-    /**setPicWay = 1时依靠居中选择框**/
+    /**
+     * setPicWay = 1时依靠居中选择框
+     **/
     private int mCutW, mCutH;
     private float mdX = 0f, mdY = 0f;
     private int mWidth, mHeight;
@@ -69,17 +73,33 @@ public class PicCutView extends View {
      **/
     private float mBorderYMax = 0.8f;
     private boolean mDebug = false;
-    /**是否是有4比3框框**/
+    /**
+     * 是否是有4比3框框
+     **/
     private boolean mUse4div3rect = true;
 
-    /**是否可以修改缩放框**/
+    /**
+     * 是否可以修改缩放框
+     **/
     private boolean mCanChangeRect = true;
 
-    /**是否可以移动缩放**/
+    /**
+     * 是否可以移动缩放
+     **/
     private boolean mCanMoveAndScale = true;
 
-    /**裁剪框修改后抬起动画**/
+    /**
+     * 裁剪框修改后抬起动画
+     **/
     private ValueAnimator mTransFinishAnim;
+
+    /**
+     * 当前正在拖拽哪个裁剪框角
+     **/
+    private boolean mCutRectLeftTopIsDragging = false;
+    private boolean mCutRectLeftBottomIsDragging = false;
+    private boolean mCutRectRightTopIsDragging = false;
+    private boolean mCutRectRightBottomIsDragging = false;
 
     private void init() {
         if (mMatrix == null) {
@@ -136,7 +156,6 @@ public class PicCutView extends View {
         mSetPicWay = 3;
         resetView();
     }
-
 
 
     /**
@@ -307,17 +326,6 @@ public class PicCutView extends View {
      **/
     public Bitmap cutPic() {
         if (mBmp != null && !mBmp.isRecycled() && mCutRect != null) {
-//            int width = mCutRect.width();
-//            int height = mCutRect.height();
-//            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-//            Matrix tempMatrix = new Matrix(mMatrix);
-//            tempMatrix.postTranslate(-mCutRect.left, -mCutRect.top);  //例如我要截取图片可见部分的右半部分，等同于我选择框不动，图片向左移动相应距离。所以left这个对左边的距离等同于图片要左移的距离
-//            Canvas canvas = new Canvas(bitmap);
-//            Paint paint = new Paint();
-//            paint.setAntiAlias(true);
-//            canvas.drawBitmap(mBmp, tempMatrix, paint);
-//            return bitmap;
-            //todo :
             int width = mCutRect.width();
             int height = mCutRect.height();
             Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
@@ -365,13 +373,18 @@ public class PicCutView extends View {
         if (mBmp == null || mBmp.isRecycled()) {
             return true;
         }
-        int offset = 150;
+        int offset = (int) convertDpToPixel(50, getContext()); //边框4角4个点在多大的范围内可以接受触摸事件实现拖动缩放
+        int smallestEdgeSize = (int) convertDpToPixel(100, getContext());  //裁剪框最小能有多小
         Rect leftTop = new Rect(mCutRect.left - offset, mCutRect.top - offset, mCutRect.left + offset, mCutRect.top + offset);
         Rect rightTop = new Rect(mCutRect.right - offset, mCutRect.top - offset, mCutRect.right + offset, mCutRect.top + offset);
         Rect leftBottom = new Rect(mCutRect.left - offset, mCutRect.bottom - offset, mCutRect.left + offset, mCutRect.bottom + offset);
         Rect rightBottom = new Rect(mCutRect.right - offset, mCutRect.bottom - offset, mCutRect.right + offset, mCutRect.bottom + offset);
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
+                mCutRectLeftTopIsDragging = false;
+                mCutRectLeftBottomIsDragging = false;
+                mCutRectRightTopIsDragging = false;
+                mCutRectRightBottomIsDragging = false;
                 mPrevDistance = 0;
                 mPrevPointCount = event.getPointerCount();
                 //算出移动中心坐标、点间距离
@@ -393,12 +406,16 @@ public class PicCutView extends View {
                     //判断是否是选择rect的4个角度附近
                     if (leftTop.contains((int) event.getX(), (int) event.getY())) {
                         mCanMoveAndScale = false;
+                        mCutRectLeftTopIsDragging = true;
                     } else if (rightTop.contains((int) event.getX(), (int) event.getY())) {
                         mCanMoveAndScale = false;
+                        mCutRectRightTopIsDragging = true;
                     } else if (leftBottom.contains((int) event.getX(), (int) event.getY())) {
                         mCanMoveAndScale = false;
+                        mCutRectLeftBottomIsDragging = true;
                     } else if (rightBottom.contains((int) event.getX(), (int) event.getY())) {
                         mCanMoveAndScale = false;
+                        mCutRectRightBottomIsDragging = true;
                     }
                 }
                 break;
@@ -444,33 +461,32 @@ public class PicCutView extends View {
                 //当前坐标 - 上次坐标 = 偏移值，然后进行位置偏移
                 if (mPrevCurrentCenter == null) {
                     mPrevCurrentCenter = new PointF(mAvergeX, mAvergeY);
-                } else if(event.getPointerCount() > 0) { //至少要保证真正地有一个点按着移动
+                } else if (event.getPointerCount() > 0) { //至少要保证真正地有一个点按着移动
                     if (mCanChangeRect && event.getPointerCount() == 1 && !mCanMoveAndScale) { //如果允许拖动裁剪框而且手指数只有1
                         Rect mCutRectBeforeChange = new Rect(mCutRect);
                         //判断是否是选择rect的4个角度附近，是就跟随手指移动修改
-                        float wTohRatiroBeforeChange = (float) mCutRectInitedClone.width() / mCutRectInitedClone.height();
-                        float hTowRatiroBeforeChange = 1 / wTohRatiroBeforeChange;
-                        if (leftTop.contains((int) event.getX(), (int) event.getY())) {
+                        float wTohRatioBeforeChange = (float) mCutRectInitedClone.width() / mCutRectInitedClone.height();
+                        float hTowRatioBeforeChange = 1 / wTohRatioBeforeChange;
+                        if (leftTop.contains((int) event.getX(), (int) event.getY()) || mCutRectLeftTopIsDragging) {
                             mCutRect.left += event.getX(0) - mPrevCurrentCenter.x;
                             mCutRect.top += event.getY(0) - mPrevCurrentCenter.y;
-                            mCutRect.bottom = (int) (mCutRect.top + mCutRect.width() * hTowRatiroBeforeChange);  //通过重新设定符合初始化时裁剪框的比例的高，来保持比例
-                        }
-                        else if (rightTop.contains((int) event.getX(), (int) event.getY())) {
+                            mCutRect.bottom = (int) (mCutRect.top + mCutRect.width() * hTowRatioBeforeChange);  //通过重新设定符合初始化时裁剪框的比例的高，来保持比例
+                        } else if (rightTop.contains((int) event.getX(), (int) event.getY()) || mCutRectRightTopIsDragging) {
                             mCutRect.right += event.getX(0) - mPrevCurrentCenter.x;
                             mCutRect.top += event.getY(0) - mPrevCurrentCenter.y;
-                            mCutRect.bottom = (int) (mCutRect.top + mCutRect.width() * hTowRatiroBeforeChange);  //通过重新设定符合初始化时裁剪框的比例的高，来保持比例
-                        } else if (leftBottom.contains((int) event.getX(), (int) event.getY())) {
+                            mCutRect.bottom = (int) (mCutRect.top + mCutRect.width() * hTowRatioBeforeChange);  //通过重新设定符合初始化时裁剪框的比例的高，来保持比例
+                        } else if (leftBottom.contains((int) event.getX(), (int) event.getY()) || mCutRectLeftBottomIsDragging) {
                             mCutRect.left += event.getX(0) - mPrevCurrentCenter.x;
                             mCutRect.bottom += event.getY(0) - mPrevCurrentCenter.y;
-                            mCutRect.top = (int) (mCutRect.bottom - mCutRect.width() * hTowRatiroBeforeChange);  //通过重新设定符合初始化时裁剪框的比例的高，来保持比例
-                        } else if (rightBottom.contains((int) event.getX(), (int) event.getY())) {
+                            mCutRect.top = (int) (mCutRect.bottom - mCutRect.width() * hTowRatioBeforeChange);  //通过重新设定符合初始化时裁剪框的比例的高，来保持比例
+                        } else if (rightBottom.contains((int) event.getX(), (int) event.getY()) || mCutRectRightBottomIsDragging) {
                             mCutRect.right += event.getX(0) - mPrevCurrentCenter.x;
                             mCutRect.bottom += event.getY(0) - mPrevCurrentCenter.y;
-                            mCutRect.top = (int) (mCutRect.bottom - mCutRect.width() * hTowRatiroBeforeChange);  //通过重新设定符合初始化时裁剪框的比例的高，来保持比例
+                            mCutRect.top = (int) (mCutRect.bottom - mCutRect.width() * hTowRatioBeforeChange);  //通过重新设定符合初始化时裁剪框的比例的高，来保持比例
                         }
-                        //如果宽或者高已经到最小面积或最大面积，将修改无效化 //todo bug：可以缩在100以内
-                        if (mCutRect.width() > mCutRectInitedClone.width() || mCutRect.width() < 100
-                                || mCutRect.height() > mCutRectInitedClone.height() || mCutRect.height() < 100)  {
+                        //如果宽或者高已经到最小面积或最大面积，将修改无效化
+                        if (mCutRect.width() > mCutRectInitedClone.width() || mCutRect.width() < smallestEdgeSize
+                                || mCutRect.height() > mCutRectInitedClone.height() || mCutRect.height() < smallestEdgeSize) {
                             mCutRect = new Rect(mCutRectBeforeChange);
                         }
                         //不允许把框推出画面之外:
@@ -505,7 +521,6 @@ public class PicCutView extends View {
                     int scalePx = mCutRect.centerX();
                     int scalePy = mCutRect.centerY();
                     float scale = (float) mCutRectInitedClone.width() / mCutRect.width();
-//                    translate(mCutRectInitedClone.left - mCutRect.left, mCutRectInitedClone.top - mCutRect.top);
                     scale(scale, scalePx, scalePy);
                     translate((scalePx - mCutRect.centerX()) * scale, (scalePy - mCutRect.centerY()) * scale);
                     mCutRect = new Rect(mCutRectInitedClone);
@@ -533,7 +548,7 @@ public class PicCutView extends View {
             }
             Paint p = new Paint();
             p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(3); //todo 要多粗啊
+            p.setStrokeWidth(3);
             p.setColor(Color.WHITE);
             canvas.drawRect(mCutRect, p);
 
@@ -559,8 +574,8 @@ public class PicCutView extends View {
                 nineRectPaint.setStrokeWidth(3);
                 canvas.drawLine((float) mCutRect.left, (float) mCutRect.top + mCutRect.height() * 1 / 3, (float) mCutRect.left + mCutRect.width(), (float) mCutRect.top + mCutRect.height() * 1 / 3, nineRectPaint);
                 canvas.drawLine((float) mCutRect.left, (float) mCutRect.top + mCutRect.height() * 2 / 3, (float) mCutRect.left + mCutRect.width(), (float) mCutRect.top + mCutRect.height() * 2 / 3, nineRectPaint);
-                canvas.drawLine((float) mCutRect.left + mCutRect.height() * 1 / 3, (float) mCutRect.top , (float) mCutRect.left + mCutRect.height() * 1 / 3, (float) mCutRect.top + mCutRect.height(), nineRectPaint);
-                canvas.drawLine((float) mCutRect.left + mCutRect.height() * 2 / 3, (float) mCutRect.top , (float) mCutRect.left + mCutRect.height() * 2 / 3, (float) mCutRect.top + mCutRect.height(), nineRectPaint);
+                canvas.drawLine((float) mCutRect.left + mCutRect.width() * 1 / 3, (float) mCutRect.top, (float) mCutRect.left + mCutRect.width() * 1 / 3, (float) mCutRect.top + mCutRect.height(), nineRectPaint);
+                canvas.drawLine((float) mCutRect.left + mCutRect.width() * 2 / 3, (float) mCutRect.top, (float) mCutRect.left + mCutRect.width() * 2 / 3, (float) mCutRect.top + mCutRect.height(), nineRectPaint);
             }
 
             //绘制提示语:
@@ -600,27 +615,18 @@ public class PicCutView extends View {
             switch (mSetPicWay) {
                 case 0: {//根据图片选择裁剪框大小
                     float wRatio = 0.9f;
-//                    float hRatio = 0.69f;
                     int cutW = (int) (mWidth * wRatio);
-//                    int cutH = (int) (mHeight * hRatio);
                     int cutH = (int) (mWidth * wRatio * 4 / 3); //默认H:W = 4:3
                     if (mBmp != null && !mBmp.isRecycled()) {
 //                        float bmpRatio = mBmp.getWidth() >= mBmp.getHeight() ? (float) mBmp.getWidth() / mBmp.getHeight() : (float) mBmp.getHeight() / mBmp.getWidth();
                         float bmpRatio = (float) mBmp.getWidth() / mBmp.getHeight();
                         if (bmpRatio > 1.3f) { //如果图片比较长，使用正方形选择框
-//                        if (mBmp.getWidth() == mBmp.getHeight()) {
                             if (cutW >= cutH) {
                                 cutW = cutH;
                             } else {
                                 cutH = cutW;
                             }
                         } //否则用长条形选择框
-                        //todo 对齐iOS，强制3:4，等iOS端支持按图片比例更换框框大小再弄回上面那种：
-//                        if (cutW >= cutH) {
-//                            cutW = cutH * 4 / 3;
-//                        } else {
-//                            cutH = cutW * 4 / 3;
-//                        }
                     }
                     mCutRect = new Rect((mWidth - cutW) / 2, (mHeight - cutH) / 2, (mWidth - cutW) / 2 + cutW, (mHeight - cutH) / 2 + cutH);
                     if (mCanChangeRect) {

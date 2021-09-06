@@ -161,6 +161,10 @@ public class PicChoicer extends View {
         mTransFinishAnim.start();
     }
 
+    private void onClick(int x, int y) {
+
+    }
+
     private void resetView() {
         if (mWidth > 0 && mHeight > 0 && mBmpList != null) {
             this.mUnitSize = (int) (mHeight * 0.6f);
