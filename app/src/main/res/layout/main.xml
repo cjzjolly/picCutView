@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rl_edit_page"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FF000000">
+
+    <Button
+        android:id="@+id/btn_goto_picCut"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="图片裁剪器"/>
+
+    <Button
+        android:id="@+id/btn_goto_picChoice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="图片选择器"/>
+
+
+
+</LinearLayout>

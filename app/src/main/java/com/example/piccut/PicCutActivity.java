@@ -10,7 +10,7 @@ import android.widget.ImageView;
 
 import com.example.test.PicCutNew;
 
-public class MainActivity extends Activity {
+public class PicCutActivity extends Activity {
 
     private PicCutView mPicCutView;
     private Button mBtnCut;

@@ -24,7 +24,7 @@ import com.example.switcher.Switcher;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity2 extends AppCompatActivity {
+public class PicChoiceActivity extends AppCompatActivity {
 
     private ViewPager mViewPager;
     private Switcher mTab;
